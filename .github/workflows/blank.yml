@@ -5,19 +5,34 @@ on: push
 jobs:
   automated-api-tests:
     runs-on: windows-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Install Postman CLI
         run: |
           powershell.exe -NoProfile -InputFormat None -ExecutionPolicy AllSigned -Command "[System.Net.ServicePointManager]::SecurityProtocol = 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://dl-cli.pstmn.io/install/win64.ps1'))"
+
       - name: Login to Postman CLI
         run: postman login --with-api-key ${{ secrets.POSTMAN_API_KEY }}
-      - name: Run API tests
+
+      - name: Run API tests and export results
         run: |
-          postman collection run "41720565-caa60997-8172-4459-8209-7e979a6a19ff"
+          postman collection run "41720565-caa60997-8172-4459-8209-7e979a6a19ff" `
+          --reporters cli,json `
+          --reporter-json-export results.json
+
+      - name: Install HTML Report Generator
+        run: |
+          npm install -g newman-reporter-htmlextra
+
+      - name: Generate HTML Report
+        run: |
+          npx htmlextra results.json --output report.html
 
       - name: Upload HTML Report
         uses: actions/upload-artifact@v4
         with:
-          name: api-test-report
+          name: api-test-html-report
           path: report.html
+          retention-days: 7
